@@ -1,0 +1,75 @@
+function onEdit(e) {
+  try {
+    // Ensure that the event object 'e' is defined
+    if (!e) {
+      Logger.log("Event object is undefined.");
+      return;
+    }
+
+    Logger.log("onEdit triggered");
+    Logger.log("Event object: " + JSON.stringify(e));
+
+    const ss = e.source;
+    const sheet = ss.getActiveSheet();
+    const editedRange = e.range;
+
+    // Specify the sheets for Ami, Amit, Haresh, Sachin, Snehal, Suraj
+    const targetSheets = ['Ami', 'Amit', 'Haresh', 'Sachin', 'Snehal', 'Suraj'];
+
+    // Check if the edit was in the correct sheet and column
+    if (targetSheets.includes(sheet.getName()) && editedRange.getColumn() == 3) {
+      Logger.log("Edit in valid sheet and column");
+
+      const projectSheet = ss.getSheetByName('Project_Estimate_Dump'); // Updated sheet name
+      if (!projectSheet) {
+        Logger.log("Project_Estimate_Dump sheet not found.");
+        return;
+      }
+
+      const personValue = sheet.getRange(editedRange.getRow(), 3).getValue(); // The value in column C
+      Logger.log("Person Value: " + personValue);
+
+      // Get data from columns A, I, J, and K in the Project_Estimate_Dump sheet
+      const projectNames = projectSheet.getRange('A2:A').getValues(); // Names in Project_Estimate_Dump
+      const colI = projectSheet.getRange('I2:I').getValues(); // Data from column I
+      const colJ = projectSheet.getRange('J2:J').getValues(); // Data from column J
+      const colK = projectSheet.getRange('K2:K').getValues(); // Data from column K
+
+      // Check if data ranges are empty
+      if (projectNames.length === 0 || colI.length === 0 || colJ.length === 0 || colK.length === 0) {
+        Logger.log("One or more data ranges in Project_Estimate_Dump are empty.");
+        return;
+      }
+
+      // Initialize an empty array for dropdown options
+      let dropdownValues = [];
+
+      // Loop through Project_Estimate_Dump data to match and collect corresponding values from columns I, J, and K
+      for (let i = 0; i < projectNames.length; i++) {
+        if (projectNames[i][0] === personValue) {
+          // Combine the values from I, J, and K with a hyphen ("-")
+          const combinedValue = `${colI[i][0]}-${colJ[i][0]}-${colK[i][0]}`;
+          dropdownValues.push([combinedValue]);
+        }
+      }
+
+      Logger.log("Dropdown Values: " + JSON.stringify(dropdownValues));
+
+      // Set the dropdown in column D of the current sheet
+      if (dropdownValues.length > 0) {
+        const cell = sheet.getRange(editedRange.getRow(), 4);
+        const rule = SpreadsheetApp.newDataValidation().requireValueInList(dropdownValues.flat(), true).build();
+        cell.setDataValidation(rule);
+        Logger.log("Dropdown set successfully for value: " + personValue);
+      } else {
+        // If no match is found, clear the dropdown
+        sheet.getRange(editedRange.getRow(), 4).clearDataValidation();
+        Logger.log("No matching values found for: " + personValue);
+      }
+    } else {
+      Logger.log("Edit not in target sheet or column");
+    }
+  } catch (error) {
+    Logger.log("Error: " + error.toString());
+  }
+}      
